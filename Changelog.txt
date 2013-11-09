@@ -1,0 +1,87 @@
+--- v2.3 (June 24, 2013)
+    - Added support for Atmega168. Use Makefile.atmega168. 
+      (Should also work with Atmega88 and 328 [not tested])
+    - Simplified main loop by removing setIdle/getIdle implementation,
+      optional for joysticks according to HID specification appendix G.
+    - Code cleanups.
+
+--- v2.2 (February 11, 2013)
+    - Reduced USB interrupt-in poll interval. 
+	- Use a new USB Vendor ID
+	- A new calibration fixer updated to support this new firmware is available. 
+	- The calibration fixer source code is now available.
+	- Serial number now working again.
+
+--- v2.1 (November 12, 2011)
+    - Fixed USB detection when no controllers are present. This was broken
+	  in 2.0. Controller swapping still worked fine though.
+
+	- Changed the device name to allow easier version identification.
+
+--- v2.0 (November 3, 2011)
+    - Force feedback support:
+	  - N64 rumble pack and Gamecube controller built-in vibration supported!
+	  - Implemented using standard HID PID (Physical Interface Device) which 
+	    means: No special driver required. Tested on Linux (fftest) and win7
+       directx.
+	  - Special thanks to Sean Green for providing an updated device
+	    descriptor and an example main.c from his own project for me
+		to use and finally implement this feature. Without this, I don't
+		think I would have ever taken the time to add this feature.	
+
+	- The L and R buttons analog feature on gamecube controllers can be
+	  disabled. Useful when they are causing problems and you don't mind
+	  using only the L and R digital switches. To disable the analog feature, 
+	  fully press  L and R when connecting the controller.
+
+	- The calibration fixer windows executables are now provided with
+	  the source code. See calibration_fixer/readme.txt for details.
+ 
+	- Code cleanups:
+	  - New asm transmission code capable of sending many bytes with perfect
+	    timing.
+      - N64/Gamecube communication code is now shared between the N64 and 
+		GC drivers. It's the same wire protocol so it makes sense.
+
+--- v1.4 (June 2011)
+    - Update gamecube reception code using the new N64 algorithm from 1.3.
+	  To my knowledge, this does not fix a known problem but being more robust
+	  should be good.
+
+	- Synchronized controller polling with USB polling. This should prevent USB
+	  communications from interferring with the timing sensitive N64/Gamecube 
+	  protocol. At least with my equipment, this seems to fix very rare spurious
+	  button presses (One in several minutes).
+
+	- Confirmed the adapter works with the new white gamecube controllers with
+	  extra long cable (Japanese import).
+
+--- v1.3 (May 2011)
+	- Found out why some HORI pads where having issues (random joystick jumps and
+	spurious button presses). This is due to the HORI communication timing
+	being very different from original Nintento pads. (1.5 times slower bit
+	rate). Implemented a new reception algorithm that should be very tolerant
+	to timing variations and jitter. Works well with all my controllers.
+	
+	- It is now possible hot-swap between N64 and Gamecube controllers.
+	With earlier versions, this would have required a disconnect/reconnect
+	of the USB cable to reset the firmware.
+
+	- It is no longer necessary to connect a controller (gc or N64) in
+	order for the adapter to be detected by the computer (USB).
+
+	- Updated USB code to vusb-20100715 from
+	http://www.obdev.at/products/vusb/index.html
+
+--- v1.2 (Nov ??, 2008)
+	Nintendo Wavebird controllers are now supported.
+	Compatibility improvements.
+
+--- v1.1 (Nov 11, 2007)
+	C-Stick vertical orientation was wrong.
+
+--- v1.0 (Apr 21, 2007)
+Initial release:
+	Nintendo 64 controller support
+	Gamecube controller support
+

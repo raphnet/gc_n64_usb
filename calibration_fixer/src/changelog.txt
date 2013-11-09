@@ -1,0 +1,4 @@
+- Version 1.2 (2014-06-24)
+  * Added support for GCN64-USB v2.3
+
+
