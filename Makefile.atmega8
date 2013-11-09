@@ -9,9 +9,7 @@
 
 UISP = uisp -dprog=stk500 -dpart=atmega8 -dserial=/dev/avr
 COMPILE = avr-gcc -Wall -Os -Iusbdrv -I. -mmcu=atmega8 -DF_CPU=12000000L #-DDEBUG_LEVEL=1
-COMMON_OBJS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o n64.o reportdesc.o gcn64_protocol.o
-
-OBJECTS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o devdesc.o gamecube.o n64.o reportdesc.o gcn64_protocol.o
+OBJECTS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o devdesc.o gamecube.o n64.o reportdesc.o gcn64_protocol.o gc_kb.o
 
 
 # symbolic targets:
@@ -35,7 +33,7 @@ clean:
 	rm -f gc_n64_usb.hex gc_n64_usb.lst gc_n64_usb.obj gc_n64_usb.cof gc_n64_usb.list gc_n64_usb.map gc_n64_usb.eep.hex gc_n64_usb.bin *.o usbdrv/*.o gc_n64_usb.s usbdrv/oddebug.s usbdrv/usbdrv.s
 
 # file targets:
-gc_n64_usb.bin:	$(COMMON_OBJS)	gamecube.o devdesc.o
+gc_n64_usb.bin:	$(OBJECTS)	gamecube.o devdesc.o
 	$(COMPILE) -o gc_n64_usb.bin $(OBJECTS) -Wl,-Map=gc_n64_usb.map
 
 gc_n64_usb.hex:	gc_n64_usb.bin

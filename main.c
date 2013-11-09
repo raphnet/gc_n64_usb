@@ -30,6 +30,7 @@
 #include "gamepad.h"
 #include "gamecube.h"
 #include "n64.h"
+#include "gc_kb.h"
 #include "gcn64_protocol.h"
 
 #include "devdesc.h"
@@ -507,6 +508,13 @@ int main(void)
 
 				case CONTROLLER_IS_GC:
 					curGamepad = gamecubeGetGamepad();
+					curGamepad->init();
+					gamepadVibrate(0);
+					error_count = 0;
+					break;
+
+				case CONTROLLER_IS_GC_KEYBOARD:
+					curGamepad = gc_kb_getGamepad();
 					curGamepad->init();
 					gamepadVibrate(0);
 					error_count = 0;
