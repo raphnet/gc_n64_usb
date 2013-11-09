@@ -2,9 +2,10 @@
 #define _gamepad_h__
 
 typedef struct {
+	int num_reports;
+
 	int reportDescriptorSize;
 	void *reportDescriptor; // must be in flash
-	int num_reports;
 
 	int deviceDescriptorSize; // if 0, use default
 	void *deviceDescriptor; // must be in flash
