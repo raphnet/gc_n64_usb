@@ -6,7 +6,6 @@
  * Tabsize: 4
  * Copyright: (c) 2008 by Jeroen Benschop and OBJECTIVE DEVELOPMENT Software GmbH
  * License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
- * Revision: $Id: usbdrvasm20.inc,v 1.1 2011-05-23 21:32:09 cvs Exp $
  */
 
 /* Do not link this file! Link usbdrvasm.S instead, which includes the
