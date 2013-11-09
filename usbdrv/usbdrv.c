@@ -169,7 +169,7 @@ PROGMEM const char usbDescriptorConfiguration[] = {    /* USB configuration desc
     0x00,       /* target country code */
     0x01,       /* number of HID Report (or other HID class) Descriptor infos to follow */
     0x22,       /* descriptor type: report */
-    USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH & 0xff, USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH >> 8,  /* total length of report descriptor */
+    USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH, 0,  /* total length of report descriptor */
 #endif
 #if USB_CFG_HAVE_INTRIN_ENDPOINT    /* endpoint descriptor for endpoint 1 */
     7,          /* sizeof(usbDescrEndpoint) */
