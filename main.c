@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include "usbdrv.h"
-#include "oddebug.h"
 #include "gamepad.h"
 #include "gamecube.h"
 #include "n64.h"
@@ -55,6 +54,54 @@ PROGMEM const int usbDescriptorStringSerialNumber[] = {
 	USB_STRING_DESCRIPTOR_HEADER(USB_CFG_SERIAL_NUMBER_LENGTH),
 	'0', '0', '0', '1'
 };
+
+char usbDescriptorConfiguration[] = { 0 }; // dummy
+
+uchar my_usbDescriptorConfiguration[] = {    /* USB configuration descriptor */
+    9,          /* sizeof(usbDescriptorConfiguration): length of descriptor in bytes */
+    USBDESCR_CONFIG,    /* descriptor type */
+    18 + 7 * USB_CFG_HAVE_INTRIN_ENDPOINT + 9, 0,
+                /* total length of data returned (including inlined descriptors) */
+    1,          /* number of interfaces in this configuration */
+    1,          /* index of this configuration */
+    0,          /* configuration name string index */
+#if USB_CFG_IS_SELF_POWERED
+    USBATTR_SELFPOWER,  /* attributes */
+#else
+    USBATTR_BUSPOWER,   /* attributes */
+#endif
+    USB_CFG_MAX_BUS_POWER/2,            /* max USB current in 2mA units */
+/* interface descriptor follows inline: */
+    9,          /* sizeof(usbDescrInterface): length of descriptor in bytes */
+    USBDESCR_INTERFACE, /* descriptor type */
+    0,          /* index of this interface */
+    0,          /* alternate setting for this interface */
+    USB_CFG_HAVE_INTRIN_ENDPOINT,   /* endpoints excl 0: number of endpoint descriptors to follow */
+    USB_CFG_INTERFACE_CLASS,
+    USB_CFG_INTERFACE_SUBCLASS,
+    USB_CFG_INTERFACE_PROTOCOL,
+    0,          /* string index for interface */
+//#if (USB_CFG_DESCR_PROPS_HID & 0xff)    /* HID descriptor */
+    9,          /* sizeof(usbDescrHID): length of descriptor in bytes */
+    USBDESCR_HID,   /* descriptor type: HID */
+    0x01, 0x01, /* BCD representation of HID version */
+    0x00,       /* target country code */
+    0x01,       /* number of HID Report (or other HID class) Descriptor infos to follow */
+    0x22,       /* descriptor type: report */
+	0, 0, // /* total length of report descriptor. Updated at run-time depending on current gamepad */
+//#endif
+#if USB_CFG_HAVE_INTRIN_ENDPOINT    /* endpoint descriptor for endpoint 1 */
+    7,          /* sizeof(usbDescrEndpoint) */
+    USBDESCR_ENDPOINT,  /* descriptor type = endpoint */
+    0x81,       /* IN endpoint number 1 */
+    0x03,       /* attrib: Interrupt endpoint */
+    8, 0,       /* maximum packet size */
+    USB_CFG_INTR_POLL_INTERVAL, /* in ms */
+#endif
+};
+
+
+
 
 static Gamepad *curGamepad = NULL;
 
@@ -163,6 +210,9 @@ usbMsgLen_t   usbFunctionDescriptor(struct usbRequest *rq)
 				usbMsgPtr = (void*)rt_usbHidReportDescriptor;
 				return rt_usbHidReportDescriptorSize;
 
+			case USBDESCR_CONFIG:
+				usbMsgPtr = (usbMsgPtr_t)my_usbDescriptorConfiguration;
+				return sizeof(my_usbDescriptorConfiguration);
 		}
 	}
 
@@ -451,188 +501,211 @@ void transferGamepadReport(int id)
 	}
 }
 
+/* Poll the controller
+ * Send reports
+ */
+static void controller_present_doTasks(char just_changed)
+{{{
+	char must_report = 0;
+	static int error_count = 0;
+	int i;
 
-int main(void)
-{
-	char must_report = 0, first_run = 1;
-	uchar   idleCounters[MAX_REPORTS];
-	int error_count = 0, i;
+	/* main event loop */
+	wdt_reset();
 
-	memset(idleCounters, 0, MAX_REPORTS);
+	// this must be called at each 50 ms or less
+	usbPoll();
 
-	hardwareInit();
-	odDebugInit();
+	if (just_changed) {
+		gamepadVibrate(0);
+		error_count = 0;
+	}
 
-	/* I know both gamepads uses the same report descriptor and
-	 * the same device descriptor */
-	rt_usbHidReportDescriptor = (void*)gcn64_usbHidReportDescriptor;
-	rt_usbHidReportDescriptorSize = getUsbHidReportDescriptor_size();
-	rt_usbDeviceDescriptor = (void*)usbDescrDevice;
-	rt_usbDeviceDescriptorSize = getUsbDescrDevice_size();
-
-	// Do hardwareInit again. It causes a USB reset. 
-	usbReset();
-	gcn64protocol_hwinit();
-
-	wdt_enable(WDTO_2S);
-	usbInit();
-	sei();
-	DBG1(0x00, 0, 0);
-	
-	while (1) 
-	{	
-		wdt_reset();
-	
-		if (error_count > 30) {
-			curGamepad = NULL;
-		}
-
-		if (curGamepad == NULL) {
-			gamepadVibrate(0);
-			error_count = 0;
-
-			// this must be called at each 50 ms or less
-			usbPoll();
-			transferGamepadReport(1); // We know they all have only one
-			_delay_ms(30);
-			usbPoll();
-	
-			switch(gcn64_detectController())
-			{
-				case CONTROLLER_IS_N64:
-					curGamepad = n64GetGamepad();
-					curGamepad->init();
-					gamepadVibrate(0);
-					error_count = 0;
-					break;
-
-				case CONTROLLER_IS_GC:
-					curGamepad = gamecubeGetGamepad();
-					curGamepad->init();
-					gamepadVibrate(0);
-					error_count = 0;
-					break;
-
-				case CONTROLLER_IS_GC_KEYBOARD:
-					curGamepad = gc_kb_getGamepad();
-					curGamepad->init();
-					gamepadVibrate(0);
-					error_count = 0;
-					break;
-
-					// Unknown means weird reply from the controller
-					// try the old, bruteforce approach.
-				case CONTROLLER_IS_UNKNOWN:
-					/* Check for gamecube controller */
-					curGamepad = gamecubeGetGamepad();
-					curGamepad->init();
-					if (curGamepad->probe()) {
-						curGamepad = curGamepad;
-						gamepadVibrate(0);
-						error_count = 0;
-						goto detected;
-					}
-
-					usbPoll();
-					_delay_ms(40);
-					usbPoll();
-
-					/* Check for n64 controller */
-					curGamepad = n64GetGamepad();
-					curGamepad->init();
-					if (curGamepad->probe())  {
-						curGamepad = curGamepad;
-						gamepadVibrate(0);
-						error_count = 0;
-						goto detected;
-					}
-
-					break;
-			}
-			continue;
-		}
-
+	/* Poll the controller at the configured speed */
+	if (mustPollControllers())
+	{
+		clrPollControllers();
 		
-detected:		
-		/* main event loop */
-		wdt_reset();
-
-		// this must be called at each 50 ms or less
-		usbPoll();
-
-		if (first_run) {
+		if (!must_report)
+		{
 			decideVibration();
+
+			// Wait! Before doing this, let an USB interrupt occur. This
+			// prevents USB interrupts from occuring during the
+			// timing sensitive Gamecube/N64 communication.
+			//
+			// USB communication interrupts are triggering at regular
+			// intervals on my machine. Between interrupts, we have 900uS of
+			// free time.
+			//
+			// The trick here is to put the CPU in idle mode ; That is, wating
+			// for interrupts, doing nothing. When the CPU resumes, an interrupt
+			// has been serviced. The final delay helps when we get more than
+			// once in a row (it happens, saw it on the scope. It was inserting
+			// a huge delay in the command I was sending to the controller)
+			//
+			sleep_enable();
+			sleep_cpu();
+			sleep_disable();
+			_delay_us(100);
+
 			if (curGamepad->update()) {
 				error_count++;
 			} else {
 				error_count = 0;
 			}
-			first_run = 0;
-		}
 
-		/* Poll the controller at the configured speed */
-		if (mustPollControllers())
-		{
-			clrPollControllers();
-			
-			if (!must_report)
-			{
-				decideVibration();
-
-				// Wait! Before doing this, let an USB interrupt occur. This
-				// prevents USB interrupts from occuring during the
-				// timing sensitive Gamecube/N64 communication.
-				//
-				// USB communication interrupts are triggering at regular
-				// intervals on my machine. Between interrupts, we have 900uS of
-				// free time.
-				//
-				// The trick here is to put the CPU in idle mode ; That is, wating
-				// for interrupts, doing nothing. When the CPU resumes, an interrupt
-				// has been serviced. The final delay helps when we get more than
-				// once in a row (it happens, saw it on the scope. It was inserting
-				// a huge delay in the command I was sending to the controller)
-				//
-				sleep_enable();
-				sleep_cpu();
-				sleep_disable();
-				_delay_us(100);
-
-				if (curGamepad->update()) {
-					error_count++;
-				} else {
-					error_count = 0;
+			/* Check what will have to be reported */
+			for (i=0; i<curGamepad->num_reports; i++) {
+				if (curGamepad->changed(i+1)) {
+					must_report |= (1<<i);
 				}
-
-				/* Check what will have to be reported */
-				for (i=0; i<curGamepad->num_reports; i++) {
-	                if (curGamepad->changed(i+1)) {
-    	                must_report |= (1<<i);
-        	        }
-				}
-            }
-
+			}
 		}
 
-		if (mustRunEffectLoop()) 
-		{
-			clrRunEffectLoop();
-			effect_loop();
+	}
 
+	if (mustRunEffectLoop()) 
+	{
+		clrRunEffectLoop();
+		effect_loop();
+
+	}
+
+	if(must_report)
+	{
+		for (i = 0; i < curGamepad->num_reports; i++)
+		{
+			if ((must_report & (1<<i)) == 0)
+				continue;
+
+
+			transferGamepadReport(i+1);
 		}
 
-		if(must_report)
-		{
-			for (i = 0; i < curGamepad->num_reports; i++)
-			{
-				if ((must_report & (1<<i)) == 0)
-					continue;
+		must_report = 0;
+	}
 
+	// Detect disconnection
+	if (error_count > 30) {
+		curGamepad = NULL;
+	}
+}}}
 
-				transferGamepadReport(i+1);
+Gamepad *tryDetectController(void)
+{{{
+	Gamepad *pad = NULL;
+
+	gamepadVibrate(0);
+
+	// this must be called at each 50 ms or less
+	usbPoll();
+	transferGamepadReport(1); // We know they all have only one
+	_delay_ms(30);
+	usbPoll();
+
+	switch(gcn64_detectController())
+	{
+		case CONTROLLER_IS_N64:
+			pad = n64GetGamepad();
+			pad->init();
+			break;
+
+		case CONTROLLER_IS_GC:
+			pad = gamecubeGetGamepad();
+			pad->init();
+			break;
+
+		case CONTROLLER_IS_GC_KEYBOARD:
+			pad = gc_kb_getGamepad();
+			pad->init();
+			break;
+
+			// Unknown means weird reply from the controller
+			// try the old, bruteforce approach.
+		case CONTROLLER_IS_UNKNOWN:
+			/* Check for gamecube controller */
+			pad = gamecubeGetGamepad();
+			pad->init();
+			if (pad->probe()) {
+				break;
 			}
 
-			must_report = 0;
+			usbPoll();
+			_delay_ms(40);
+			usbPoll();
+
+			/* Check for n64 controller */
+			pad = n64GetGamepad();
+			pad->init();
+			if (pad->probe())  {
+				break;
+			}
+
+			pad = NULL;
+			break;
+	}
+
+	return pad;
+}}}
+
+int main(void)
+{
+	char just_detected = 1;
+	Gamepad *pad;
+
+	hardwareInit();
+	gcn64protocol_hwinit();
+
+reconnect:
+
+	if (curGamepad && curGamepad->reportDescriptor) {
+		rt_usbHidReportDescriptor = curGamepad->reportDescriptor;
+		rt_usbHidReportDescriptorSize = curGamepad->reportDescriptorSize;
+	} else {
+		rt_usbHidReportDescriptor = (void*)gcn64_usbHidReportDescriptor;
+		rt_usbHidReportDescriptorSize = getUsbHidReportDescriptor_size();
+	}
+
+	if (curGamepad && curGamepad->deviceDescriptor) {
+		rt_usbDeviceDescriptor = curGamepad->deviceDescriptor;
+		rt_usbDeviceDescriptorSize = curGamepad->deviceDescriptorSize;
+	} else {
+		rt_usbDeviceDescriptor = (void*)usbDescrDevice;
+		rt_usbDeviceDescriptorSize = getUsbDescrDevice_size();
+	}
+
+	// patch the config descriptor with the HID report descriptor size
+	my_usbDescriptorConfiguration[25] = rt_usbHidReportDescriptorSize;
+	my_usbDescriptorConfiguration[26] = rt_usbHidReportDescriptorSize >> 8;
+
+	// Do hardwareInit again. It causes a USB reset. 
+	usbReset();
+
+	wdt_enable(WDTO_2S);
+	usbInit();
+	sei();
+	
+	while (1) 
+	{	
+		usbPoll();
+		wdt_reset();
+
+		if (curGamepad == NULL) {
+			pad = tryDetectController();
+			if (pad) {
+				curGamepad = pad;
+				just_detected = 1;
+				
+				if (pad->reportDescriptor != rt_usbHidReportDescriptor) {
+					goto reconnect;
+				}
+			}		
+		}
+
+		if (curGamepad) {
+			controller_present_doTasks(just_detected);
+			just_detected = 0;
 		}
 	}
 	return 0;
