@@ -178,12 +178,12 @@ static int gamecubeBuildReport(unsigned char *reportBuffer, int id)
 	return GCN64_REPORT_SIZE;
 }
 
-void gamecubeVibration(int value)
+static void gamecubeVibration(int value)
 {
 	gc_rumbling = value;
 }
 
-Gamepad GamecubeGamepad = {
+static Gamepad GamecubeGamepad = {
 	.num_reports			= 1,
 	.init					= gamecubeInit,
 	.update					= gamecubeUpdate,

@@ -270,7 +270,7 @@ static void n64SetVibration(int value)
 	}
 }
 
-Gamepad N64Gamepad = {
+static Gamepad N64Gamepad = {
 	.init					= n64Init,
 	.update					= n64Update,
 	.changed				= n64Changed,
