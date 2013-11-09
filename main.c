@@ -45,12 +45,12 @@
 #define AT168_COMPATIBLE
 #endif
 
-static uchar *rt_usbHidReportDescriptor=NULL;
+static const uchar *rt_usbHidReportDescriptor=NULL;
 static int rt_usbHidReportDescriptorSize=0;
 static uchar *rt_usbDeviceDescriptor=NULL;
 static uchar rt_usbDeviceDescriptorSize=0;
 
-PROGMEM int usbDescriptorStringSerialNumber[] = {
+PROGMEM const int usbDescriptorStringSerialNumber[] = {
 	USB_STRING_DESCRIPTOR_HEADER(USB_CFG_SERIAL_NUMBER_LENGTH),
 	'0', '0', '0', '1'
 };
@@ -159,7 +159,7 @@ usbMsgLen_t   usbFunctionDescriptor(struct usbRequest *rq)
 				return rt_usbDeviceDescriptorSize;
 
 			case USBDESCR_HID_REPORT:
-				usbMsgPtr = rt_usbHidReportDescriptor;
+				usbMsgPtr = (void*)rt_usbHidReportDescriptor;
 				return rt_usbHidReportDescriptorSize;
 
 		}
@@ -464,7 +464,7 @@ int main(void)
 
 	/* I know both gamepads uses the same report descriptor and
 	 * the same device descriptor */
-	rt_usbHidReportDescriptor = gcn64_usbHidReportDescriptor;
+	rt_usbHidReportDescriptor = (void*)gcn64_usbHidReportDescriptor;
 	rt_usbHidReportDescriptorSize = getUsbHidReportDescriptor_size();
 	rt_usbDeviceDescriptor = (void*)usbDescrDevice;
 	rt_usbDeviceDescriptorSize = getUsbDescrDevice_size();
