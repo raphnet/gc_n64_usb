@@ -423,10 +423,8 @@ int gcn64_detectController(void)
 	 *
 	 * */
 
-	id = gcn64_protocol_getByte(0);
-	id |= gcn64_protocol_getByte(8)<<8;
-				// Ascii keyboard
-				return CONTROLLER_IS_GC_KEYBOARD;
+	id = gcn64_protocol_getByte(0)<<8;
+	id |= gcn64_protocol_getByte(8);
 
 	switch (id >> 8) {
 		case 0x05:
