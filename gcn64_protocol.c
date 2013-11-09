@@ -52,6 +52,33 @@ static int bitsToWorkbufBytes(unsigned char *bytes, int num_bytes, int workbuf_b
 	return bit;
 }
 
+/* Read a byte from the buffer (where 1 byte is 1 bit).
+ * MSb first.
+ */
+unsigned char gcn64_protocol_getByte(int offset)
+{
+	unsigned char val, b;
+	unsigned char volatile *addr = gcn64_workbuf + offset;
+
+	for (b=0x80, val=0; b; b>>=1)
+	{
+		if (*addr)
+			val |= b;
+		addr++;
+	}
+	return val;
+}
+
+void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf)
+{
+	int i;
+
+	for (i=0; i<n_bytes; i++) {
+		*dstbuf = gcn64_protocol_getByte(offset + (i*8));
+		dstbuf++;
+	}
+}
+
 // The bit timeout is a counter to 127. This is the 
 // start value. Counting from 0 takes hundreads of 
 // microseconds. Because of this, the reception function
@@ -332,7 +359,7 @@ int gcn64_detectController(void)
 {
 	unsigned char tmp = GC_GETID;
 	int count;
-	unsigned char nib;
+	unsigned short id;
 
 	count = gcn64_transaction(&tmp, 1);
 	if (count == 0) {
@@ -367,7 +394,8 @@ int gcn64_detectController(void)
 	 * 0000 0101 0000 0000 0000 0001 : 0x050001 With expansion pack
 	 * 0000 0101 0000 0000 0000 0010 : 0x050002 Expansion pack removed
 	 *
-	 *
+	 * -- Ascii keyboard (keyboard connector)
+	 * 0000 1000 0010 0000 0000 0000 : 0x082000
 	 *
 	 * Ok, so based on the above, when the second nibble is a 9 or 8, a
 	 * gamecube compatible controller is present. If on the other hand
@@ -395,6 +423,32 @@ int gcn64_detectController(void)
 	 *
 	 * */
 
+	id = gcn64_protocol_getByte(0);
+	id |= gcn64_protocol_getByte(8)<<8;
+				// Ascii keyboard
+				return CONTROLLER_IS_GC_KEYBOARD;
+
+	switch (id >> 8) {
+		case 0x05:
+			return CONTROLLER_IS_N64;
+
+		case 0x09: // normal controllers
+		case 0x0b: // Never saw this one, but it is mentionned above.
+			return CONTROLLER_IS_GC;
+
+		case 0x08:
+			if (id == 0x0820) {
+				// Ascii keyboard
+				return CONTROLLER_IS_GC_KEYBOARD;
+			}
+			// wavebird, controller off.
+			return CONTROLLER_IS_GC;
+
+		default: 
+			return CONTROLLER_IS_UNKNOWN;
+	}
+
+#if 0
 	nib = 0;
 	if (gcn64_workbuf[4])
 		nib |= 0x8;
@@ -416,7 +470,7 @@ int gcn64_detectController(void)
 
 		default: return CONTROLLER_IS_UNKNOWN;
 	}
-
+#endif
 	return 0;
 }
 
