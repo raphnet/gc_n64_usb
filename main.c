@@ -544,10 +544,12 @@ static void controller_present_doTasks(char just_changed)
 			// once in a row (it happens, saw it on the scope. It was inserting
 			// a huge delay in the command I was sending to the controller)
 			//
+			wdt_disable();
 			sleep_enable();
 			sleep_cpu();
 			sleep_disable();
 			_delay_us(100);
+			wdt_enable(WDTO_2S);
 
 			if (curGamepad->update()) {
 				error_count++;
