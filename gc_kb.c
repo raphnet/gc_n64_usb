@@ -134,7 +134,7 @@ static const unsigned char gc_to_hid_table[] PROGMEM = {
 	GC_KEY_DOWN,			0x51,
 	GC_KEY_UP,				0x52,
 	GC_KEY_RIGHT,			0x4F,
-	GC_KEY_ENTER,			0x58,
+	GC_KEY_ENTER,			0x28,
 };
 
 unsigned char gcKeycodeToHID(unsigned char gc_code)
@@ -157,17 +157,8 @@ unsigned char gcKeycodeToHID(unsigned char gc_code)
 	return 0x38; // HID /? key for unknown keys
 }
 
-static int gc_analog_lr_disable = 0;
-
 static void gamecubeInit(void)
 {
-	if (0 == gamecubeUpdate()) {
-		if (gcn64_workbuf[GC_BTN_L] && gcn64_workbuf[GC_BTN_R]) {
-			gc_analog_lr_disable = 1;
-		} else {
-			gc_analog_lr_disable = 0;
-		}
-	}
 }
 
 static char gamecubeUpdate(void)
