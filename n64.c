@@ -59,7 +59,10 @@ static char n64Update(void)
 	int i;
 	unsigned char tmpdata[38];
 	unsigned char count;
-
+	unsigned char x,y;
+	unsigned char btns1, btns2;
+	unsigned char rb1, rb2;
+	unsigned char caps[3];
 
 	/* Pad answer to N64_GET_CAPABILITIES
 	 *
@@ -78,14 +81,19 @@ static char n64Update(void)
 		n64_rumble_state = RSTATE_INIT;
 		return -1;
 	}
+
+	caps[0] = gcn64_protocol_getByte(0);
+	caps[1] = gcn64_protocol_getByte(1);
+	caps[2] = gcn64_protocol_getByte(2);
 	
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
-	if (gcn64_workbuf[OFFSET_EXT_PRESENT] && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
+	//if (gcn64_workbuf[OFFSET_EXT_PRESENT] && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
+	if ((caps[2] & 0x01) && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
 		n64_rumble_state = RSTATE_INIT;	
 	}
 
 	/* Detect when a pack is removed. */
-	if (!gcn64_workbuf[OFFSET_EXT_PRESENT]) {
+	if (!(caps[2] & 0x01)) {
 		n64_rumble_state = RSTATE_UNAVAILABLE;
 	}
 
@@ -154,30 +162,30 @@ static char n64Update(void)
 	24-31: analog Y axis
  */
 
-	tmpdata[0]=0;
-	tmpdata[1]=0;
-	tmpdata[2]=0;
-	tmpdata[3]=0;
+	btns1 = gcn64_protocol_getByte(0);
+	btns2 = gcn64_protocol_getByte(8);
+	x = gcn64_protocol_getByte(16); // X axis
+	y = gcn64_protocol_getByte(24); // Y axis
 
+	rb1 = rb2 = 0;
+
+	// Remap buttons as they always were by this 
+	// adapter. Might change in v3 when a N64
+	// specific report descriptor will be used.
+	//
 	for (i=0; i<4; i++) // A B Z START
-		tmpdata[2] |= gcn64_workbuf[i] ? (0x01<<i) : 0;
-
+		rb1 |= (btns1 & (0x80 >> i)) ? (0x01<<i) : 0;
 	for (i=0; i<4; i++) // C-UP C-DOWN C-LEFT C-RIGHT
-		tmpdata[2] |= gcn64_workbuf[i+12] ? (0x10<<i) : 0;
-	
+		rb1 |= btns2 & (0x08 >> i) ? (0x10<<i) : 0;
 	for (i=0; i<2; i++) // L R
-		tmpdata[3] |= gcn64_workbuf[i+10] ? (0x01<<i) : 0;
-
-	for (i=0; i<8; i++) // X axis
-		tmpdata[0] |= gcn64_workbuf[i+16] ? (0x80>>i) : 0;
+		rb2 |= btns2 & (0x20 >> i) ? (0x01<<i) : 0;
+	for (i=0; i<4; i++) // Up down left right
+		rb2 |= btns1 & (0x08 >> i) ? (0x04<<i) : 0;
 	
-	for (i=0; i<8; i++) // Y axis
-		tmpdata[1] |= gcn64_workbuf[i+24] ? (0x80>>i) : 0;	
-
 	// analog joystick
 	last_built_report[0] = 1;
-	last_built_report[1] = ((int)((signed char)tmpdata[0]))+127;
-	last_built_report[2] = ((int)( -((signed char)tmpdata[1])) )+127;
+	last_built_report[1] = ((int)((signed char)x))+127;
+	last_built_report[2] = ((int)( -((signed char)y)) )+127;
 
 	last_built_report[3] = 0x7f;
 	last_built_report[4] = 0x7f;
@@ -185,19 +193,8 @@ static char n64Update(void)
 	last_built_report[6] = 0x7f;
 
 	// buttons
-	last_built_report[7] = tmpdata[2];
-	last_built_report[8] = tmpdata[3];
-	
-
-	// dpad as buttons
-	if (gcn64_workbuf[4]) 
-		last_built_report[8] |= 0x04;
-	if (gcn64_workbuf[5])
-		last_built_report[8] |= 0x08;
-	if (gcn64_workbuf[6])
-		last_built_report[8] |= 0x10;
-	if (gcn64_workbuf[7])
-		last_built_report[8] |= 0x20;
+	last_built_report[7] = rb1;
+	last_built_report[8] = rb2;
 
 	return 0;
 }

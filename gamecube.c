@@ -42,7 +42,12 @@ static int gc_analog_lr_disable = 0;
 static void gamecubeInit(void)
 {
 	if (0 == gamecubeUpdate()) {
-		if (gcn64_workbuf[GC_BTN_L] && gcn64_workbuf[GC_BTN_R]) {
+		unsigned char btns2;
+
+		btns2 = gcn64_protocol_getByte(8);
+
+		//if (gcn64_workbuf[GC_BTN_L] && gcn64_workbuf[GC_BTN_R]) {
+		if ((btns2 & 0x06) == 0x06) { // L + R
 			gc_analog_lr_disable = 1;
 		} else {
 			gc_analog_lr_disable = 0;
@@ -56,6 +61,7 @@ static char gamecubeUpdate(void)
 	unsigned char tmp=0;
 	unsigned char tmpdata[8];	
 	unsigned char count;
+	unsigned char x,y,cx,cy,rtrig,ltrig,btns1,btns2,rb1,rb2;
 	
 	/* Get ID command.
 	 * 
@@ -100,58 +106,43 @@ static char gamecubeUpdate(void)
 	56-63	Right Btn Val
  */
 	
+	btns1 = gcn64_protocol_getByte(0);
+	btns2 = gcn64_protocol_getByte(8);
+	x = gcn64_protocol_getByte(16);
+	y = gcn64_protocol_getByte(24);
+	cx = gcn64_protocol_getByte(32);
+	cy = gcn64_protocol_getByte(40);
+	ltrig = gcn64_protocol_getByte(48);
+	rtrig = gcn64_protocol_getByte(56);
+
 	/* Convert the one-byte-per-bit data generated
 	 * by the assembler mess above to nicely packed
 	 * binary data. */	
 	memset(tmpdata, 0, sizeof(tmpdata));
 
-	for (i=0; i<8; i++) // X axis
-		tmpdata[0] |= gcn64_workbuf[i+16] ? (0x80>>i) : 0;
-	
-	for (i=0; i<8; i++) // Y axis
-		tmpdata[1] |= gcn64_workbuf[i+24] ? (0x80>>i) : 0;
-	tmpdata[1] ^= 0xff;
-
-	for (i=0; i<8; i++) // C X axis
-		tmpdata[2] |= gcn64_workbuf[i+32] ? (0x80>>i) : 0;
-
-	// Raph: October 2007. C stick vertical orientation 
-	// was wrong. But no one complained...
-#if INVERTED_VERTICAL_C_STICK
-	for (i=0; i<8; i++) // C Y axis
-		tmpdata[3] |= gcn64_workbuf[i+40] ? (0x80>>i) : 0;	
-#else
-	for (i=0; i<8; i++) // C Y axis
-		tmpdata[3] |= gcn64_workbuf[i+40] ? 0 : (0x80>>i);	
-#endif
-
-	for (i=0; i<8; i++) // Left btn value
-		tmpdata[4] |= gcn64_workbuf[i+48] ? (0x80>>i) : 0;
-	tmpdata[4] ^= 0xff;
-	
-	for (i=0; i<8; i++) // Right btn value
-		tmpdata[5] |= gcn64_workbuf[i+56] ? (0x80>>i) : 0;	
-	tmpdata[5] ^= 0xff;
+	rb1 = rb2 = 0;
 
 	for (i=0; i<5; i++) // St Y X B A
-		tmpdata[6] |= gcn64_workbuf[i+3] ? (0x01<<i) : 0;
+		rb1 |= (btns1 & (0x10 >> i)) ? (0x01<<i) : 0;
 	for (i=0; i<3; i++) // L R Z
-		tmpdata[6] |= gcn64_workbuf[i+9] ? (0x20<<i) : 0;
-	
+		rb1 |= (btns2 & (0x40 >> i)) ? (0x20<<i) : 0;
 	for (i=0; i<4; i++) // Up,Down,Right,Left
-		tmpdata[7] |= gcn64_workbuf[i+12] ? (0x01<<i) : 0;
-
-	// report id
-	last_built_report[0] = 1;
-
-	memcpy(last_built_report + 1, tmpdata, 6);
+		rb2 |= (btns2 & (0x08 >> i)) ? (0x01<<i) : 0;
 
 	if (gc_analog_lr_disable) {
-		last_built_report[5] = 0x7f;
-		last_built_report[6] = 0x7f;
+		ltrig = 0x7f;
+		rtrig = 0x7f;
 	}
-	last_built_report[7] = tmpdata[6];
-	last_built_report[8] = tmpdata[7];
+
+	last_built_report[0] = 1; // report ID
+	last_built_report[1] = x;
+	last_built_report[2] = y ^ 0xff;
+	last_built_report[3] = cx;
+	last_built_report[4] = cy ^ 0xff;
+	last_built_report[5] = ltrig;
+	last_built_report[6] = rtrig;
+	last_built_report[7] = rb1;
+	last_built_report[8] = rb2;
 
 	return 0; // success
 }
