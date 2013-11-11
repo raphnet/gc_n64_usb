@@ -19,7 +19,7 @@
 
 #include "gcn64_protocol.h"
 
-volatile unsigned char gcn64_workbuf[260];
+static volatile unsigned char gcn64_workbuf[260];
 
 /******** IO port definitions **************/
 #define GCN64_DATA_PORT	PORTC

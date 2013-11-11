@@ -158,18 +158,11 @@
 
 #define GC_KEY_ENTER			0x61
 
-
-#define GC_BTN_L	9
-#define GC_BTN_R	10
-#define GC_BTN_Z	11
-
 void gcn64protocol_hwinit(void);
 int gcn64_detectController(void);
 int gcn64_transaction(unsigned char *data_out, int data_out_len);
 
 unsigned char gcn64_protocol_getByte(int offset);
 void gcn64_protocol_getBytes(int offset, int n_bytes, unsigned char *dstbuf);
-
-extern volatile unsigned char gcn64_workbuf[];
 
 #endif // _gcn64_protocol_h__
