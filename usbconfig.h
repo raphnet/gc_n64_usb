@@ -231,7 +231,7 @@ section at the end of this file).
  * use it personally but beware of Windows' caching of report descriptors...
  *
  */
-#define  USB_CFG_DEVICE_ID       0x04, 0x00
+#define  USB_CFG_DEVICE_ID       0x0C, 0x00
 /* This is the ID of the product, low byte first. It is interpreted in the
  * scope of the vendor ID. If you have registered your own VID with usb.org
  * or if you have licensed a PID from somebody else, define it here. Otherwise
@@ -245,7 +245,7 @@ section at the end of this file).
  * use it personally but beware of Windows' caching of report descriptors...
  */
 
-#define USB_CFG_DEVICE_VERSION  0x03, 0x02
+#define USB_CFG_DEVICE_VERSION  0x09, 0x02
 /* Version number of the device: Minor number first, then major number.
  */
 #define USB_CFG_VENDOR_NAME     'r', 'a', 'p', 'h', 'n', 'e', 't', '.', 'n', 'e', 't'
@@ -258,7 +258,7 @@ section at the end of this file).
  * obdev's free shared VID/PID pair. See the file USB-IDs-for-free.txt for
  * details.
  */
-#define USB_CFG_DEVICE_NAME     'G','C','/','N','6','4',' ','t','o',' ','U','S','B',',',' ','v','2','.','3'
+#define USB_CFG_DEVICE_NAME     'G','C','/','N','6','4',' ','t','o',' ','U','S','B',',',' ','v','2','.','9'
 #define USB_CFG_DEVICE_NAME_LEN 19
 /* Same as above for the device name. If you don't want a device name, undefine
  * the macros. See the file USB-IDs-for-free.txt before you assign a name if
