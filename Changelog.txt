@@ -3,6 +3,7 @@
 	- Rework for device/report descriptor switching. Used
 	  to switch from Joystick to Keyboard mode.
 	- Fix compilation with newer compilers
+	- Various code cleanups.
 	- Updated V-USB
 
 --- v2.3 (June 24, 2013)
