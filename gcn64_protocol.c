@@ -19,6 +19,8 @@
 
 #include "gcn64_protocol.h"
 
+#undef FORCE_KEYBOARD
+
 static volatile unsigned char gcn64_workbuf[260];
 
 /******** IO port definitions **************/
@@ -425,6 +427,10 @@ int gcn64_detectController(void)
 
 	id = gcn64_protocol_getByte(0)<<8;
 	id |= gcn64_protocol_getByte(8);
+
+#ifdef FORCE_KEYBOARD
+	return CONTROLLER_IS_GC_KEYBOARD;
+#endif
 
 	switch (id >> 8) {
 		case 0x05:
