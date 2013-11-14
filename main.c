@@ -37,6 +37,8 @@
 
 #define MAX_REPORTS	2
 
+#undef WAIT_FOR_PAD
+
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega168A__) || \
 	defined(__AVR_ATmega168P__) || defined(__AVR_ATmega328__) || \
 	defined(__AVR_ATmega328P__) || defined(__AVR_ATmega88__) || \
@@ -136,7 +138,7 @@ static void hardwareInit(void)
 	 * is now always connected with bit 0. So bit 1 configured
 	 * as an input without pullup.
 	 *
-	 * Usb pin are init as output, low. (device reset). They are released
+	 * Usb pins are init as output, low. (device reset). They are released
 	 * later when usbReset() is called. 
 	 */
 	PORTD = 0xf8;
@@ -654,12 +656,30 @@ Gamepad *tryDetectController(void)
 int main(void)
 {
 	char just_detected = 1;
-	Gamepad *pad;
+	Gamepad *pad = NULL;
 
 	hardwareInit();
 	gcn64protocol_hwinit();
 
+#ifdef WAIT_FOR_PAD
+	do {
+		pad = tryDetectController();
+	} while (pad == NULL);
+	curGamepad = pad;
+#else
+	int i = 60;
+	do {
+		pad = tryDetectController();
+		if (pad) {
+			curGamepad = pad;
+			break;
+		}
+		_delay_ms(16);
+	} while (i);
+#endif
+
 reconnect:
+	cli();
 
 	if (curGamepad && curGamepad->reportDescriptor) {
 		rt_usbHidReportDescriptor = curGamepad->reportDescriptor;
@@ -682,10 +702,10 @@ reconnect:
 	my_usbDescriptorConfiguration[26] = rt_usbHidReportDescriptorSize >> 8;
 
 	// Do hardwareInit again. It causes a USB reset. 
-	usbReset();
 
 	wdt_enable(WDTO_2S);
 	usbInit();
+	usbReset();
 	sei();
 	
 	while (1) 
