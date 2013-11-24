@@ -25,7 +25,7 @@
 #include "gcn64_protocol.h"
 #include "usbdrv.h"
 
-#define RUMBLE_TEST
+#undef BUTTON_A_RUMBLE_TEST
 
 /*********** prototypes *************/
 static void n64Init(void);
@@ -35,6 +35,9 @@ static int n64BuildReport(unsigned char *reportBuffer, int id);
 static void n64SetVibration(int value);
 
 static char must_rumble = 0;
+#ifdef BUTTON_A_RUMBLE_TEST
+static char force_rumble = 0;
+#endif
 
 /* What was most recently read from the controller */
 static unsigned char last_built_report[GCN64_REPORT_SIZE];
@@ -131,20 +134,27 @@ static char n64Update(void)
 	if (!(caps[2] & 0x01) || (caps[2] & 0x02) ) {
 		n64_rumble_state = RSTATE_UNAVAILABLE;
 	}
+#ifdef BUTTON_A_RUMBLE_TEST
+	must_rumble = force_rumble;
+#endif
 
 	switch (n64_rumble_state)
 	{
 		case RSTATE_INIT:
 			/* Retry until the controller answers with a full byte. */
 			if (initRumble() != 0) {
-				n64_rumble_state = RSTATE_UNAVAILABLE;
+				if (initRumble() != 0) {
+					n64_rumble_state = RSTATE_UNAVAILABLE;
+				}
 				break;
 			}
 
 			if (must_rumble) {
-				n64_rumble_state = RSTATE_TURNON;
+				controlRumble(1);
+				n64_rumble_state = RSTATE_ON;
 			} else {
-				n64_rumble_state = RSTATE_TURNOFF;
+				controlRumble(0);
+				n64_rumble_state = RSTATE_OFF;
 			}
 			break;
 
@@ -162,13 +172,15 @@ static char n64Update(void)
 
 		case RSTATE_ON:
 			if (!must_rumble) {
-				n64_rumble_state = RSTATE_TURNOFF;
+				 controlRumble(0);
+				 n64_rumble_state = RSTATE_OFF;
 			}
 			break;
 
 		case RSTATE_OFF:
-			if (!must_rumble) {
-				n64_rumble_state = RSTATE_TURNON;
+			if (must_rumble) {
+				 controlRumble(1);
+				n64_rumble_state = RSTATE_ON;
 			}
 			break;
 	}
@@ -206,12 +218,19 @@ static char n64Update(void)
 	x = gcn64_protocol_getByte(16); // X axis
 	y = gcn64_protocol_getByte(24); // Y axis
 
-	rb1 = rb2 = 0;
+#ifdef BUTTON_A_RUMBLE_TEST
+	if (btns1 & 0x80) {
+		force_rumble = 1;
+	} else {
+		force_rumble = 0;
+	}
+#endif
 
 	// Remap buttons as they always were by this 
 	// adapter. Might change in v3 when a N64
 	// specific report descriptor will be used.
 	//
+	rb1 = rb2 = 0;
 	for (i=0; i<4; i++) // A B Z START
 		rb1 |= (btns1 & (0x80 >> i)) ? (0x01<<i) : 0;
 	for (i=0; i<4; i++) // C-UP C-DOWN C-LEFT C-RIGHT
