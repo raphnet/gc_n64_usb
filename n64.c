@@ -83,8 +83,8 @@ static char n64Update(void)
 	}
 
 	caps[0] = gcn64_protocol_getByte(0);
-	caps[1] = gcn64_protocol_getByte(1);
-	caps[2] = gcn64_protocol_getByte(2);
+	caps[1] = gcn64_protocol_getByte(8);
+	caps[2] = gcn64_protocol_getByte(16);
 	
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
 	//if (gcn64_workbuf[OFFSET_EXT_PRESENT] && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
