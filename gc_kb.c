@@ -23,6 +23,7 @@
 #include "leds.h"
 #include "gc_kb.h"
 #include "gcn64_protocol.h"
+#include "hid_keycodes.h"
 
 /*********** prototypes *************/
 static void gamecubeInit(void);
@@ -96,45 +97,54 @@ static const unsigned char gcKeyboardDevDesc[] PROGMEM = {    /* USB device desc
     1, /* number of configurations */
 };
 
+// http://www2d.biglobe.ne.jp/~msyk/keyboard/layout/usbkeycode.html
+
 static const unsigned char gc_to_hid_table[] PROGMEM = {
-	GC_KEY_RESERVED,		0x00,
-	GC_KEY_HOME,			0x4A,
-	GC_KEY_END,				0x4D,
-	GC_KEY_PGUP,			0x4B,
-	GC_KEY_PGDN,			0x4E,
-	GC_KEY_SCROLL_LOCK,		0x47,
-	GC_KEY_DASH_UNDERSCORE, 0x2D,
-	GC_KEY_PLUS_EQUAL,		0x2E,
-	GC_KEY_YEN,				0x89,
-	GC_KEY_OPEN_BRKT_BRACE,	0x2F,
-	GC_KEY_SEMI_COLON_COLON,0x33,
-	GC_KEY_QUOTES,			0x34,
-	GC_KEY_CLOSE_BRKT_BRACE,0x30,
-	GC_KEY_BRACKET_MU,		0x32,
-	GC_KEY_COMMA_ST,		0x36,
-	GC_KEY_PERIOD_GT,		0x37,
-	GC_KEY_SLASH_QUESTION,	0x38,
-	GC_KEY_INTERNATIONAL1,	0x87,
-	GC_KEY_ESC,				0x29,
-	GC_KEY_INSERT,			0x49,
-	GC_KEY_DELETE,			0x4c,
-	GC_KEY_HANKAKU,			0x35,
-	GC_KEY_BACKSPACE,		0x2A,
-	GC_KEY_TAB,				0x2B,
-	GC_KEY_CAPS_LOCK,		0x39,
-	GC_KEY_LEFT_SHIFT,		0xE1,
-	GC_KEY_RIGHT_SHIFT,		0xE5,
-	GC_KEY_LEFT_CTRL,		0xE0,
-	GC_KEY_LEFT_ALT,		0xE2,
-	GC_KEY_MUHENKAN,		0x8B,
-	GC_KEY_SPACE,			0x2C,
-	GC_KEY_HENKAN,			0x8A,	
-	GC_KEY_KANA,			0x88,
-	GC_KEY_LEFT,			0x50,
-	GC_KEY_DOWN,			0x51,
-	GC_KEY_UP,				0x52,
-	GC_KEY_RIGHT,			0x4F,
-	GC_KEY_ENTER,			0x28,
+	GC_KEY_RESERVED,		HID_KB_NOEVENT,
+	GC_KEY_HOME,			HID_KB_HOME,
+	GC_KEY_END,				HID_KB_END,
+	GC_KEY_PGUP,			HID_KB_PGUP,
+	GC_KEY_PGDN,			HID_KB_PGDN,
+	GC_KEY_SCROLL_LOCK,		HID_KB_SCROLL_LOCK,
+	GC_KEY_DASH_UNDERSCORE, HID_KB_DASH_UNDERSCORE,
+	GC_KEY_PLUS_EQUAL,		HID_KB_EQUAL_PLUS,
+	GC_KEY_YEN,				HID_KB_INTERNATIONAL3,
+	GC_KEY_OPEN_BRKT_BRACE,	HID_KB_OPEN_BRKT_BRACE,
+	GC_KEY_SEMI_COLON_COLON,HID_KB_SEMI_COLON_COLON,
+	GC_KEY_QUOTES,			HID_KB_QUOTES,
+	GC_KEY_CLOSE_BRKT_BRACE,HID_KB_CLOSE_BRKT_BRACE,
+	GC_KEY_BRACKET_MU,		HID_KB_NONUS_HASH_TILDE,
+	GC_KEY_COMMA_ST,		HID_KB_COMMA_SMALLER_THAN,
+	GC_KEY_PERIOD_GT,		HID_KB_PERIOD_GREATER_THAN,
+	GC_KEY_SLASH_QUESTION,	HID_KB_SLASH_QUESTION,
+	GC_KEY_INTERNATIONAL1,	HID_KB_INTERNATIONAL1,
+	GC_KEY_ESC,				HID_KB_ESCAPE,
+	GC_KEY_INSERT,			HID_KB_INSERT,
+	GC_KEY_DELETE,			HID_KB_DELETE_FORWARD,
+	GC_KEY_HANKAKU,			HID_KB_GRAVE_ACCENT_AND_TILDE,
+	GC_KEY_BACKSPACE,		HID_KB_BACKSPACE,
+	GC_KEY_TAB,				HID_KB_TAB,
+	GC_KEY_CAPS_LOCK,		HID_KB_CAPS_LOCK,
+	GC_KEY_MUHENKAN,		HID_KB_INTERNATIONAL5,
+	GC_KEY_SPACE,			HID_KB_SPACE,
+	GC_KEY_HENKAN,			HID_KB_INTERNATIONAL4,
+	GC_KEY_KANA,			HID_KB_INTERNATIONAL2,
+	GC_KEY_LEFT,			HID_KB_LEFT_ARROW,
+	GC_KEY_DOWN,			HID_KB_DOWN_ARROW,
+	GC_KEY_UP,				HID_KB_UP_ARROW,
+	GC_KEY_RIGHT,			HID_KB_RIGHT_ARROW,
+	GC_KEY_ENTER,			HID_KB_ENTER,
+
+	/* "shift" keys */
+	GC_KEY_LEFT_SHIFT,		HID_KB_LEFT_SHIFT,
+	GC_KEY_RIGHT_SHIFT,		HID_KB_RIGHT_SHIFT,
+	GC_KEY_LEFT_CTRL,		HID_KB_LEFT_CONTROL,
+
+	/* This keyboard only has a left alt key. But as right alt is required to access some
+	 * functions on japanese keyboards, I map the key to right alt.
+	 *
+	 * eg: RO-MAJI on the hiragana/katakana key */
+	GC_KEY_LEFT_ALT,		HID_KB_RIGHT_ALT,
 };
 
 unsigned char gcKeycodeToHID(unsigned char gc_code)
@@ -142,10 +152,11 @@ unsigned char gcKeycodeToHID(unsigned char gc_code)
 	int i;
 
 	if (gc_code >= GC_KEY_A && gc_code <= GC_KEY_0) {
-		return (gc_code - GC_KEY_A) + 0x04; // HID A
+		// Note: This works since A-Z, 1-9, 0 have consecutive keycode values.
+		return (gc_code - GC_KEY_A) + HID_KB_A;
 	}
 	if (gc_code >= GC_KEY_F1 && gc_code <= GC_KEY_F12) {
-		return (gc_code - GC_KEY_F1) + 0x3A; // HID F1
+		return (gc_code - GC_KEY_F1) + HID_KB_F1;
 	}
 
 	for (i=0; i<sizeof(gc_to_hid_table); i++) {
