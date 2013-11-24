@@ -37,6 +37,7 @@
 
 #define MAX_REPORTS	2
 
+#undef NONSTOP_VIBRATION
 #undef WAIT_FOR_PAD
 
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega168A__) || \
@@ -362,6 +363,11 @@ static unsigned char magnitude = 0;
 
 static void decideVibration(void)
 {
+#ifdef NONSTOP_VIBRATION
+	gamepadVibrate(1);
+	return;
+#endif
+
 	if (!_loop_count)
 		vibration_on = 0;
 
