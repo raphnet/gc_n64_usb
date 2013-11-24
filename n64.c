@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2011  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -25,12 +25,16 @@
 #include "gcn64_protocol.h"
 #include "usbdrv.h"
 
+#define RUMBLE_TEST
+
 /*********** prototypes *************/
 static void n64Init(void);
 static char n64Update(void);
 static char n64Changed(int id);
 static int n64BuildReport(unsigned char *reportBuffer, int id);
+static void n64SetVibration(int value);
 
+static char must_rumble = 0;
 
 /* What was most recently read from the controller */
 static unsigned char last_built_report[GCN64_REPORT_SIZE];
@@ -53,11 +57,43 @@ static void n64Init(void)
 #define RSTATE_TURNOFF		4
 #define RSTATE_UNAVAILABLE	5
 static unsigned char n64_rumble_state = RSTATE_UNAVAILABLE;
+unsigned char tmpdata[40];
+
+static char initRumble(void)
+{
+	int count;
+
+	tmpdata[0] = N64_EXPANSION_WRITE;
+	tmpdata[1] = 0x80;
+	tmpdata[2] = 0x01;
+	memset(tmpdata+3, 0x80, 32);
+
+	/* Note: The old test (count > 0) was not reliable. */
+	count = gcn64_transaction(tmpdata, 35);
+	if (count == 8)
+		return 0;
+
+	return -1;
+}
+
+static char controlRumble(char enable)
+{
+	int count;
+
+	tmpdata[0] = N64_EXPANSION_WRITE;
+	tmpdata[1] = 0xc0;
+	tmpdata[2] = 0x1b;
+	memset(tmpdata+3, enable ? 0x01 : 0x00, 32);
+	count = gcn64_transaction(tmpdata, 35);
+	if (count == 8)
+		return 0;
+
+	return -1;
+}
 
 static char n64Update(void)
 {
 	int i;
-	unsigned char tmpdata[38];
 	unsigned char count;
 	unsigned char x,y;
 	unsigned char btns1, btns2;
@@ -85,51 +121,54 @@ static char n64Update(void)
 	caps[0] = gcn64_protocol_getByte(0);
 	caps[1] = gcn64_protocol_getByte(8);
 	caps[2] = gcn64_protocol_getByte(16);
-	
+
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
-	//if (gcn64_workbuf[OFFSET_EXT_PRESENT] && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
 	if ((caps[2] & 0x01) && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
 		n64_rumble_state = RSTATE_INIT;	
 	}
 
 	/* Detect when a pack is removed. */
-	if (!(caps[2] & 0x01)) {
+	if (!(caps[2] & 0x01) || (caps[2] & 0x02) ) {
 		n64_rumble_state = RSTATE_UNAVAILABLE;
 	}
 
 	switch (n64_rumble_state)
 	{
 		case RSTATE_INIT:
-			tmpdata[0] = N64_EXPANSION_WRITE;
-			tmpdata[1] = 0x80;
-			tmpdata[2] = 0x01;
-			memset(tmpdata+3, 0x80, 34);
-			count = gcn64_transaction(tmpdata, 35);
-			if (count > 0) {
-				/* Answer: 1011 1000 (0xb8) */
+			/* Retry until the controller answers with a full byte. */
+			if (initRumble() != 0) {
+				n64_rumble_state = RSTATE_UNAVAILABLE;
+				break;
+			}
+
+			if (must_rumble) {
+				n64_rumble_state = RSTATE_TURNON;
+			} else {
 				n64_rumble_state = RSTATE_TURNOFF;
 			}
 			break;
 
 		case RSTATE_TURNON:
-			tmpdata[0] = N64_EXPANSION_WRITE;
-			tmpdata[1] = 0xc0;
-			tmpdata[2] = 0x1b;
-			memset(tmpdata+3, 0x01, 32);
-			count = gcn64_transaction(tmpdata, 35);
-			if (count > 0) {
+			if (0 == controlRumble(1)) {
 				n64_rumble_state = RSTATE_ON;
 			}
 			break;
 
 		case RSTATE_TURNOFF:
-			tmpdata[0] = N64_EXPANSION_WRITE;
-			tmpdata[1] = 0xc0;
-			tmpdata[2] = 0x1b;
-			memset(tmpdata+3, 0x00, 32);
-			count = gcn64_transaction(tmpdata, 35);
-			if (count > 0) {
+			if (0 == controlRumble(0)) {
 				n64_rumble_state = RSTATE_OFF;
+			}
+			break;
+
+		case RSTATE_ON:
+			if (!must_rumble) {
+				n64_rumble_state = RSTATE_TURNOFF;
+			}
+			break;
+
+		case RSTATE_OFF:
+			if (!must_rumble) {
+				n64_rumble_state = RSTATE_TURNON;
 			}
 			break;
 	}
@@ -249,22 +288,7 @@ static int n64BuildReport(unsigned char *reportBuffer, int id)
 
 static void n64SetVibration(int value)
 {
-	if (n64_rumble_state == RSTATE_UNAVAILABLE || 
-			n64_rumble_state == RSTATE_INIT) 
-	{
-		// Sorry, not ready or not possible (no pack)
-		return;
-	}
-
-	if (value) {
-		if (n64_rumble_state != RSTATE_ON) {
-			n64_rumble_state = RSTATE_TURNON;
-		}
-	} else {
-		if (n64_rumble_state != RSTATE_OFF) {
-			n64_rumble_state = RSTATE_TURNOFF;
-		}
-	}
+	must_rumble = value;
 }
 
 static Gamepad N64Gamepad = {
