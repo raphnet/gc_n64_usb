@@ -2,9 +2,10 @@
 	- Add support for the Gamecube ASCII keyboard.
 	- Rework for device/report descriptor switching. Used
 	  to switch from Joystick to Keyboard mode.
-	- Fix compilation with newer compilers
+	- Improved N64 rumble pack detection.
+	- Fix compilation with newer compilers.
 	- Various code cleanups.
-	- Updated V-USB
+	- Updated V-USB.
 
 --- v2.3 (June 24, 2013)
     - Added support for Atmega168. Use Makefile.atmega168. 
