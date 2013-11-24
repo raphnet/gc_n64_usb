@@ -126,6 +126,10 @@ BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE*
 		printf("Found Device ID : VID=%04x  PID=%04x (ADAP-GCN64 v2.3)\n", vid, pid);
 		fixJoystickCalibration(); // uses global
 	}
+	else if (vid==0x289b && pid==0x000c) {
+		printf("Found Device ID : VID=%04x  PID=%04x (ADAP-GCN64 v2.9)\n", vid, pid);
+		fixJoystickCalibration(); // uses global
+	}
 	else {
 		printf("Ignoring Device ID : VID=%04x  PID=%04x\n", vid, pid);
 		
