@@ -1,4 +1,4 @@
---- v2.9 (November 2013)
+--- v2.9 (November 24, 2013)
 	- Add support for the Gamecube ASCII keyboard.
 	- Rework for device/report descriptor switching. Used
 	  to switch from Joystick to Keyboard mode.
