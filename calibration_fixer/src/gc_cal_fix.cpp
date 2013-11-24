@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
 	int opt;
 	int run_calibration = 0;
 
-	printf("raphnet.net Gamecube adapter L/R buttons calibration fixer v1.2\n");
+	printf("raphnet.net Gamecube adapter L/R buttons calibration fixer v1.3\n");
 	printf("Copyright (C) 2009-2013, Raphael Assenat\n\n");	
 
 	while(-1 != (opt = getopt(argc, argv, "hlcu"))) {
@@ -159,7 +159,7 @@ int main(int argc, char * argv[])
 				printf("  -l       Only list and display supported joystick calibration settings\n");
 				printf("  -c       Open the windows calibration dialog before exiting\n");
 				printf("  -u       Show unsigned calibration values.\n");
-				break;
+				return 0;
 
 			case 'u':
 				g_show_unsigned = 1;
