@@ -21,7 +21,8 @@
 
 #undef FORCE_KEYBOARD
 
-static volatile unsigned char gcn64_workbuf[260];
+#define GCN64_BUF_SIZE	300
+static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
 
 /******** IO port definitions **************/
 #define GCN64_DATA_PORT	PORTC
@@ -43,6 +44,9 @@ static int bitsToWorkbufBytes(unsigned char *bytes, int num_bytes, int workbuf_b
 {
 	int i, bit;
 	unsigned char p;
+
+	if (num_bytes * 8 > GCN64_BUF_SIZE)
+		return 0;
 
 	for (i=0,bit=0; i<num_bytes; i++) {
 		for (p=0x80; p; p>>=1) {
@@ -165,6 +169,8 @@ static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
 	// Explode the data to one byte per bit for very easy transmission in assembly.
 	// This trades memory for ease of implementation.
 	bits = bitsToWorkbufBytes(data, n_bytes, 0);
+	if (!bits)
+		return;
 
 	// the value of the gpio is pre-configured to low. We simulate
 	// an open drain output by toggling the direction.
@@ -293,10 +299,9 @@ static void gcn64_decodeWorkbuf(unsigned char count)
 		input++;
 
 		*output = t < *input;
-		input++;
 
+		input++;
 		output++;
-		
 	}
 }
 
@@ -452,29 +457,6 @@ int gcn64_detectController(void)
 			return CONTROLLER_IS_UNKNOWN;
 	}
 
-#if 0
-	nib = 0;
-	if (gcn64_workbuf[4])
-		nib |= 0x8;
-	if (gcn64_workbuf[5])
-		nib |= 0x4;
-	if (gcn64_workbuf[6])
-		nib |= 0x2;
-	if (gcn64_workbuf[7])
-		nib |= 0x1;
-
-	switch(nib)
-	{
-		case 0x5: return CONTROLLER_IS_N64;
-		
-		case 0x9: // normal controllers
-		case 0x8: // wavebird, controller off.
-		case 0xb: // Never saw this one, but it is mentionned above.
-			return CONTROLLER_IS_GC;
-
-		default: return CONTROLLER_IS_UNKNOWN;
-	}
-#endif
 	return 0;
 }
 
