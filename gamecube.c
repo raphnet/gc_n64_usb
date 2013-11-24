@@ -115,13 +115,8 @@ static char gamecubeUpdate(void)
 	ltrig = gcn64_protocol_getByte(48);
 	rtrig = gcn64_protocol_getByte(56);
 
-	/* Convert the one-byte-per-bit data generated
-	 * by the assembler mess above to nicely packed
-	 * binary data. */	
-	memset(tmpdata, 0, sizeof(tmpdata));
-
+	/* Prepare button bits */
 	rb1 = rb2 = 0;
-
 	for (i=0; i<5; i++) // St Y X B A
 		rb1 |= (btns1 & (0x10 >> i)) ? (0x01<<i) : 0;
 	for (i=0; i<3; i++) // L R Z
@@ -139,8 +134,9 @@ static char gamecubeUpdate(void)
 	last_built_report[2] = y ^ 0xff;
 	last_built_report[3] = cx;
 	last_built_report[4] = cy ^ 0xff;
-	last_built_report[5] = ltrig;
-	last_built_report[6] = rtrig;
+	// Sliders value to decrease as pushed (v2.x behaviour)
+	last_built_report[5] = ltrig ^ 0xff;
+	last_built_report[6] = rtrig ^ 0xff;
 	last_built_report[7] = rb1;
 	last_built_report[8] = rb2;
 
