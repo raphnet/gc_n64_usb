@@ -680,7 +680,7 @@ int main(void)
 			break;
 		}
 		_delay_ms(16);
-	} while (i);
+	} while (--i);
 #endif
 
 reconnect:
