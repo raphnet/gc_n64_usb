@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2014  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -127,7 +127,7 @@ static char n64Update(void)
 
 	/* Detect when a pack becomes present and schedule initialisation when it happens. */
 	if ((caps[2] & 0x01) && (n64_rumble_state == RSTATE_UNAVAILABLE)) {
-		n64_rumble_state = RSTATE_INIT;	
+		n64_rumble_state = RSTATE_INIT;
 	}
 
 	/* Detect when a pack is removed. */
@@ -226,7 +226,7 @@ static char n64Update(void)
 	}
 #endif
 
-	// Remap buttons as they always were by this 
+	// Remap buttons as they always were by this
 	// adapter. Might change in v3 when a N64
 	// specific report descriptor will be used.
 	//
@@ -239,11 +239,23 @@ static char n64Update(void)
 		rb2 |= btns2 & (0x20 >> i) ? (0x01<<i) : 0;
 	for (i=0; i<4; i++) // Up down left right
 		rb2 |= btns1 & (0x08 >> i) ? (0x04<<i) : 0;
-	
+
+	x = (x ^ 0x80) - 1;
+	y = ((y ^ 0x80) ) ^ 0xFF;
+
+	// The following helps a cheap TTX controller
+	// which uses the full 8 bit range instead
+	// of +/- 80. The specific test here prevents
+	// receiving a value of 128 (instead of -127).
+	//
+	// This will have no effect on "normal" controllers.
+	if (x == 0xFF)
+		x = 0;
+
 	// analog joystick
 	last_built_report[0] = 1;
-	last_built_report[1] = ((int)((signed char)x))+127;
-	last_built_report[2] = ((int)( -((signed char)y)) )+127;
+	last_built_report[1] = x;
+	last_built_report[2] = y;
 
 	last_built_report[3] = 0x7f;
 	last_built_report[4] = 0x7f;
@@ -279,7 +291,7 @@ static char n64Probe(void)
 	{
 		usbPoll(); // must be called at each 50ms or less
 		_delay_ms(30);
-		
+
 		tmp = N64_GET_CAPABILITIES;
 		count = gcn64_transaction(&tmp, 1);
 
@@ -290,7 +302,6 @@ static char n64Probe(void)
 	return 0;
 }
 
-
 static char n64Changed(int id)
 {
 	return memcmp(last_built_report, last_sent_report, GCN64_REPORT_SIZE);
@@ -298,10 +309,10 @@ static char n64Changed(int id)
 
 static int n64BuildReport(unsigned char *reportBuffer, int id)
 {
-	if (reportBuffer) 
+	if (reportBuffer)
 		memcpy(reportBuffer, last_built_report, GCN64_REPORT_SIZE);
-	
-	memcpy(	last_sent_report, last_built_report, GCN64_REPORT_SIZE);	
+
+	memcpy(	last_sent_report, last_built_report, GCN64_REPORT_SIZE);
 	return GCN64_REPORT_SIZE;
 }
 
@@ -326,4 +337,3 @@ Gamepad *n64GetGamepad(void)
 	N64Gamepad.reportDescriptorSize = getUsbHidReportDescriptor_size();
 	return &N64Gamepad;
 }
-
