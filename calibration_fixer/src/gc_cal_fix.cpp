@@ -16,6 +16,7 @@ LPDIRECTINPUTDEVICE8    g_pJoystick = NULL;
 static int g_num_fixed = 0;
 static int g_only_list = 0;
 static int g_show_unsigned = 0;
+static int g_saturn_3d = 0;
 
 int fixJoystickCalibration(void)
 {
@@ -48,7 +49,7 @@ int fixJoystickCalibration(void)
 	cpoints.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 	cpoints.diph.dwHow = DIPH_BYOFFSET;	
 
-	for (x=0; x<6; x++) {
+	for (x=0; x<8; x++) {
 		cpoints.diph.dwObj = axes[x];
 	
 		hr = g_pJoystick->GetProperty(DIPROP_CALIBRATION, &cpoints.diph);
@@ -65,12 +66,22 @@ int fixJoystickCalibration(void)
 		}
 
 		if (!g_only_list) {
-			if (x==4 || x==5) {
-				cpoints.lCenter = cpoints.lMax;
-				cpoints.lMax = 0xff;
-			
-				g_pJoystick->SetProperty(DIPROP_CALIBRATION, &cpoints.diph);
-				printf(" (Modified)");
+			if (g_saturn_3d) {
+				if (x==5 || x==6) {
+					cpoints.lCenter = 0;
+					cpoints.lMax = 0xff;
+					cpoints.lMin = -1;
+					g_pJoystick->SetProperty(DIPROP_CALIBRATION, &cpoints.diph);
+					printf(" (Modified)");
+				}
+			} else {
+				if (x==4 || x==5) {
+					cpoints.lCenter = cpoints.lMax;
+					cpoints.lMax = 0xff;
+				
+					g_pJoystick->SetProperty(DIPROP_CALIBRATION, &cpoints.diph);
+					printf(" (Modified)");
+				}
 			}
 		}
 		printf("\n");
@@ -108,7 +119,7 @@ BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE*
 	vid = vidpid.dwData & 0xffff;
 	pid = vidpid.dwData >> 16;
 
-	
+	g_saturn_3d = 0;	
 
 	if (vid==0x1781 && pid==0x0a9a) {
 		printf("Found Device ID : VID=%04x  PID=%04x (ADAP-GCN64 v1.x)\n", vid, pid);
@@ -130,6 +141,11 @@ BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE*
 		printf("Found Device ID : VID=%04x  PID=%04x (ADAP-GCN64 v2.9)\n", vid, pid);
 		fixJoystickCalibration(); // uses global
 	}
+	else if (vid==0X289B && pid==0X0005) {
+		printf("Found Device ID : VID=%04x  PID=%04x (Saturn joystick)\n", vid, pid);
+		g_saturn_3d = 1;
+		fixJoystickCalibration(); // uses global
+	}
 	else {
 		printf("Ignoring Device ID : VID=%04x  PID=%04x\n", vid, pid);
 		
@@ -144,8 +160,8 @@ int main(int argc, char * argv[])
 	int opt;
 	int run_calibration = 0;
 
-	printf("raphnet.net Gamecube adapter L/R buttons calibration fixer v1.3\n");
-	printf("Copyright (C) 2009-2013, Raphael Assenat\n\n");	
+	printf("raphnet.net Gamecube adapter L/R buttons calibration fixer v1.4\n");
+	printf("Copyright (C) 2009-2014, Raphael Assenat\n\n");	
 
 	while(-1 != (opt = getopt(argc, argv, "hlcu"))) {
 		switch (opt)
