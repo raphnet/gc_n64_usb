@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -62,16 +62,26 @@ static char gamecubeUpdate(void)
 	unsigned char tmpdata[8];	
 	unsigned char count;
 	unsigned char x,y,cx,cy,rtrig,ltrig,btns1,btns2,rb1,rb2;
-	
+
+#if 1
 	/* Get ID command.
-	 * 
-	 * If we don't do that, the wavebird does not work.  
+	 *
+	 * If we don't do that, the wavebird does not work.
+	 *
+	 * 2015-12-08: RA:
+	 * 	In fact, calling gcn64_detectController at least
+	 * 	once is enough to "enable" the wavebird receiver. In any case,
+	 * 	the GET_STATUS commands below get answered. This means
+	 * 	this GET_ID command is in fact optional. Removing it
+	 * 	does not seem to do harm with my receiver at least. But
+	 * 	I will not risk changing what has been there for years.
 	 */
 	tmp = GC_GETID;
 	count = gcn64_transaction(&tmp, 1);
 	if (count != GC_GETID_REPLY_LENGTH) {
 		return 1;
 	}
+#endif
 
 	tmpdata[0] = GC_GETSTATUS1;
 	tmpdata[1] = GC_GETSTATUS2;
@@ -81,7 +91,7 @@ static char gamecubeUpdate(void)
 	if (count != GC_GETSTATUS_REPLY_LENGTH) {
 		return 1; // failure
 	}
-	
+
 /*
 	(Source: Nintendo Gamecube Controller Protocol
 		updated 8th March 2004, by James.)
