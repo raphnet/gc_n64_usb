@@ -1,3 +1,6 @@
+--- v2.9.2 (December 8, 2015)
+	- Fixed Wavebird detection (was unreliable since v2.9)
+
 --- v2.9.1 (April 17, 2014)
     - Prevent 8bit overflow from occuring. Helps some cheap 3rd party
 	  controllers that have the "Left not working" problem.
