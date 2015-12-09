@@ -1,5 +1,5 @@
 /*	gc_n64_usb : Gamecube or N64 controller to USB firmware
-	Copyright (C) 2007-2013  Raphael Assenat <raph@raphnet.net>
+	Copyright (C) 2007-2015  Raphael Assenat <raph@raphnet.net>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -20,6 +20,17 @@
 #include "gcn64_protocol.h"
 
 #undef FORCE_KEYBOARD
+#undef FORCE_GAMECUBE
+
+// I have a MadCatz micro-con contorller which misbehaves when
+// N64 timing (3/1 ratio) is used. None of my N64 controllers
+// misbehave using gamecube timings, but as this adapter is not
+// easily updatable, I won't take the risk of changing a parameter
+// that has been constant for years.
+//
+// But the option is there for those of you who are going to compile
+// the project and are willing to change this.
+#undef GAMECUBE_TIMINGS // If not defined, use N64 timings
 
 #define GCN64_BUF_SIZE	300
 static volatile unsigned char gcn64_workbuf[GCN64_BUF_SIZE];
@@ -179,11 +190,18 @@ static void gcn64_sendBytes(unsigned char *data, unsigned char n_bytes)
 
 	// busy looping delays based on busy loop and nop tuning.
 	// valid for 12Mhz clock.
+#ifdef GAMECUBE_TIMINGS // (3.6/1.5us)
+#define DLY_SHORT_1ST	"ldi r17, 2\n rcall sb_dly%=\nnop\nnop\n "
+#define DLY_LARGE_1ST	"ldi r17, 11\n rcall sb_dly%=\nnop\n"
+#define DLY_SHORT_2ND	"nop\nnop\nnop\nnop\nnop\n"
+#define DLY_LARGE_2ND	"ldi r17, 7\n rcall sb_dly%=\n nop\nnop\n"
+#warning USING GAMECUBE TIMINGS
+#else // N64 timings (3/1us)
 #define DLY_SHORT_1ST	"ldi r17, 1\n rcall sb_dly%=\n "
 #define DLY_LARGE_1ST	"ldi r17, 9\n rcall sb_dly%=\n"
 #define DLY_SHORT_2ND	"\n" 
 #define DLY_LARGE_2ND	"ldi r17, 5\n rcall sb_dly%=\n nop\nnop\n"
-
+#endif
 	asm volatile(
 	// Save the modified input operands
 	"	push r28			\n" // y
@@ -432,12 +450,14 @@ int gcn64_detectController(void)
 
 	id = gcn64_protocol_getByte(0)<<8;
 	id |= gcn64_protocol_getByte(8);
-
+#ifdef FORCE_GAMECUBE
+	return CONTROLLER_IS_GC;
+#endif
 #ifdef FORCE_KEYBOARD
 	return CONTROLLER_IS_GC_KEYBOARD;
 #endif
 
-	switch (id >> 8) {
+	switch ((id >> 8)&0x0f) {
 		case 0x05:
 			return CONTROLLER_IS_N64;
 
