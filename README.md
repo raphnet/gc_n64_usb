@@ -1,11 +1,18 @@
-# N64/Gamecube controller to USB adapter
+# N64/Gamecube controller to USB adapter (V-USB based)
 
-## What is gc_n64_usb?
+## What is (or was) gc_n64_usb?
 
 gc_n64_usb if a firmware for Atmel AVR micro-controllers which
 allows one to connect an Nintendo 64 or Gamecube controller
 to a PC with an USB port. The joystick is implemented
 as a standard HID device so no special drivers are required.
+
+Note: There is a new version of this project for AVR micro-controllers
+with native USB support (eg: Atmega32u2). I am now focusing mainly on this
+new version, which is much better already:
+
+* English: [Gamecube/N64 controller to USB adapter (Third generation)](http://www.raphnet.net/electronique/gcn64_usb_adapter_gen3/index_en.php)
+* French: [Adaptateur manette Gamecube/N64 à USB (Troisième génération)](http://www.raphnet.net/electronique/gcn64_usb_adapter_gen3/index.php)
 
 
 ## Project homepage
@@ -14,6 +21,24 @@ Schematics and additional information are available on the project homepage:
 
 * English: [N64/Gamecube controller to USB adapter](http://www.raphnet.net/electronique/gc_n64_usb/index_en.php)
 * French: [Convertisseur manette N64/Gamecube à USB](http://www.raphnet.net/electronique/gc_n64_usb/index.php)
+
+
+## What about the new version mentioned above?
+
+gc_n64_usb uses V-USB, a software-only usb driver from Objective Development.
+See [V-USB](http://www.obdev.at/products/avrusb/index.html)
+
+At the time this project was started in 2007, I used this software-only approach
+since it was cheap, and easy to solder chips (DIP packages) were available. But
+there are limitations to this approach:
+
+* Many CPU cycles are wasted for USB communication
+* Interrupts may not be disabled. Timing-sensitive N64/Gamceube communication may be interrupted by USB activity at any time, leading to rx/tx failures, retries, and in extreme cases controller resets (and in that case unwanted joystick re-calibration). The code works around this by synchronizing GC/N64 polling with USB.
+* USB is limited to low speed, which implies that
+  * Transfer size is limited to chunks of 8 bytes. Reports of 8 bytes or more must therefore be sent in two parts.
+  * The endpoint bInterval value is supposed to be no lower than 10ms, increasing latency. The project cheats and set it to 5ms anyway.. (Which results in approximate 10msi USB-contributed latency, since reports are 9 bytes...
+
+The above is what lead to the development of the new version mentionned in the introduction.
 
 
 ## Features
@@ -49,7 +74,7 @@ Older version were released under Objective Development's extended GPL license.
 
 ## About the vendor id/product id pair:
 
-Please dont re-use them for other projects. Instead, please use your own.
+Please do not re-use them for other projects. Instead, please use your own.
 
 VID/PID conflicts, especially with some Windows version caching of HID descriptors,
 can lead to complicated and hard to debug problems...
@@ -57,8 +82,7 @@ can lead to complicated and hard to debug problems...
 
 ## Acknowledgments
 
-gc_n64_usb uses V-USB, a software-only usb driver from Objective Development.
-See [V-USB](http://www.obdev.at/products/avrusb/index.html)
+* Thank you to Objective development, author of [V-USB](https://www.obdev.at/products/vusb/index.html) for a wonderful software-only USB device implementation.
 
-A good portion of gc_n64_usb is based on Objective Development's
-HIDKeys example.
+A good portion of gc_n64_usb is based on Objective Development's HIDKeys example.
+
