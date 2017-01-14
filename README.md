@@ -36,9 +36,9 @@ there are limitations to this approach:
 * Interrupts may not be disabled. Timing-sensitive N64/Gamceube communication may be interrupted by USB activity at any time, leading to rx/tx failures, retries, and in extreme cases controller resets (and in that case unwanted joystick re-calibration). The code works around this by synchronizing GC/N64 polling with USB.
 * USB is limited to low speed, which implies that
   * Transfer size is limited to chunks of 8 bytes. Reports of 8 bytes or more must therefore be sent in two parts.
-  * The endpoint bInterval value is supposed to be no lower than 10ms, increasing latency. The project cheats and set it to 5ms anyway.. (Which results in approximate 10msi USB-contributed latency, since reports are 9 bytes...
+  * The endpoint bInterval value is supposed to be no lower than 10ms, increasing latency. The project cheats and set it to 5ms anyway.. (Which results in approximate 10ms USB-contributed latency, since reports are 9 bytes...
 
-The above is what lead to the development of the new version mentionned in the introduction.
+The above is what led to the development of the new version mentionned in the introduction.
 
 
 ## Features
