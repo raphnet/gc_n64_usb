@@ -51,6 +51,17 @@ The above is what led to the development of the new version mentionned in the in
 * Supports the DK Bongos.
 
 
+## Supported micro-controllers
+
+Currently supported micro-controller(s):
+
+* Atmega8 (Makefile.atmega8)
+* Atmega88 (Makefile.atmega88 and Makefile.atmega88p)
+* Atmega168 (Makefile.atmega168)
+
+Adding support for other micro-controllers should be easy, as long as the target has enough
+IO pins, enough memory (flash and SRAM) and is supported by V-USB.
+
 ## Compilation and installation
 
 To compile, you need a working avr-gcc and avr-libc. Under linux, simply type make
