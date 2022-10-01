@@ -36,6 +36,7 @@
 #include "reportdesc.h"
 
 #define MAX_REPORTS	2
+#define USB_RESET_HOOK(resetStarts)     if(!resetStarts){usbReset();}
 
 #undef NONSTOP_VIBRATION
 #undef WAIT_FOR_PAD
